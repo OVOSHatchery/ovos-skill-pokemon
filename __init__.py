@@ -1,12 +1,10 @@
 import re
 import time
 from difflib import SequenceMatcher
-from math import ceil
 
-from adapt.intent import IntentBuilder
-from mycroft.skills.core import MycroftSkill, intent_handler
-from mycroft.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
-from mycroft.util.log import LOG
+from ovos_utils.log import LOG
+from ovos_workshop.skills.common_query_skill import CQSMatchLevel
+from ovos_workshop.skills.common_query_skill import CommonQuerySkill
 from pokebase import pokemon, APIResourceList, pokemon_species, evolution_trigger, item, type_, location, ability, \
     version, move
 
@@ -32,7 +30,8 @@ def _extract_name(message, names):
         equalities = []
         for s in split:
             name_compare_word = split_name[name_index]
-            equality = SequenceMatcher(None, name_compare_word.lower(), s.lower()).ratio()
+            equality = SequenceMatcher(None, name_compare_word.lower(),
+                                       s.lower()).ratio()
             if equality > .9:
                 equalities.append(equality)
                 name_index += 1
@@ -156,8 +155,8 @@ def split_word(to_split):
 # Even more useful docs: https://pokeapi.co/docs/v2.html/
 class PokemonSkill(CommonQuerySkill):
 
-    def __init__(self):
-        super(PokemonSkill, self).__init__(name="Pokemon")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.pokemon_names = None
         """A list of strings representing all pokemon names. These are always in english and are not 
         display-friendly. e.g.: rattata-alola"""
@@ -205,9 +204,11 @@ class PokemonSkill(CommonQuerySkill):
         :return: True to use English units, False otherwise
         """
         # docs on config: https://mycroft.ai/documentation/mycroft-conf/
-        if self.voc_match(phrase, "EnglishWeight") or self.voc_match(phrase, "EnglishLength"):
+        if self.voc_match(phrase, "EnglishWeight") or self.voc_match(
+                phrase, "EnglishLength"):
             return True
-        if self.voc_match(phrase, "MetricWeight") or self.voc_match(phrase, "MetricLength"):
+        if self.voc_match(phrase, "MetricWeight") or self.voc_match(
+                phrase, "MetricLength"):
             return False
 
         unit = self.config_core.get("system_unit")
@@ -223,7 +224,8 @@ class PokemonSkill(CommonQuerySkill):
         if isinstance(lang, str):
             lang = lang.split("-")
         lang_name = lang[0]
-        country = len(lang) > 1 and lang[1] or ""  # use lang[1] as country or "" if lang doesn't have one
+        country = len(lang) > 1 and lang[
+            1] or ""  # use lang[1] as country or "" if lang doesn't have one
         return lang_name, country
 
     def _get_name_from_lang(self, names):
@@ -241,7 +243,8 @@ class PokemonSkill(CommonQuerySkill):
 
         if not best_name:
             LOG.info("Couldn't find a name for lang_name: " + lang_name +
-                     ", country: " + country + " | using name: " + names[-1].name)
+                     ", country: " + country + " | using name: " +
+                     names[-1].name)
 
         return best_name or names[-1].name
 
@@ -251,7 +254,9 @@ class PokemonSkill(CommonQuerySkill):
         for flavor_text in flavor_text_entries:
             is_lang_correct = flavor_text.language.name == lang_name
             if is_lang_correct or not text:
-                if not version_name or any(v.name == version_name for v in flavor_text.version_group.versions):
+                if not version_name or any(
+                        v.name == version_name
+                        for v in flavor_text.version_group.versions):
                     text = flavor_text.flavor_text
                     if is_lang_correct:
                         break
@@ -276,7 +281,8 @@ class PokemonSkill(CommonQuerySkill):
         :param mon: The pokemon object created with the pokemon method
         :return: A more readable/friendly version of the pokemon's name
         """
-        return self._get_name_from_lang(mon.forms[0].names) or self._species_name(mon.species)
+        return self._get_name_from_lang(
+            mon.forms[0].names) or self._species_name(mon.species)
 
     def _species_name(self, species):
         return self._get_name_from_lang(species.names) or species.name
@@ -303,46 +309,55 @@ class PokemonSkill(CommonQuerySkill):
         trigger = evolution_trigger(evolution_details["trigger"]["name"])
         trigger_name = self._get_name_from_lang(trigger.names)
         if trigger_name:
-            trigger_name = " " + self.translate("evolve.details.trigger", {"name": trigger_name})
+            trigger_name = " " + self.translate("evolve.details.trigger",
+                                                {"name": trigger_name})
 
         held_item = evolution_details["held_item"]
         held_item_display = ""
         if held_item:
             item_name = held_item["name"]
             item_display_name = self._get_name_from_lang(item(item_name).names)
-            held_item_display = " " + self.translate("evolve.details.holding.item",
-                                                     {"item": item_display_name})
+            held_item_display = " " + self.translate(
+                "evolve.details.holding.item", {"item": item_display_name})
 
         min_level = evolution_details["min_level"]  # None or min level
         min_level_display = ""
         if min_level:
-            min_level_display = " " + self.translate("evolve.details.at.level", {"level": min_level})
+            min_level_display = " " + self.translate("evolve.details.at.level",
+                                                     {"level": min_level})
 
-        min_happiness = evolution_details["min_happiness"]  # None or min happiness
+        min_happiness = evolution_details[
+            "min_happiness"]  # None or min happiness
         min_happiness_display = ""
         if min_happiness:
-            min_happiness_display = " " + self.translate("evolve.details.with.happiness", {"happiness": min_happiness})
+            min_happiness_display = " " + self.translate(
+                "evolve.details.with.happiness", {"happiness": min_happiness})
 
         min_beauty = evolution_details["min_beauty"]
         min_beauty_display = ""
         if min_beauty:
-            min_beauty_display = " " + self.translate("evolve.details.with.beauty", {"beauty": min_beauty})
+            min_beauty_display = " " + self.translate(
+                "evolve.details.with.beauty", {"beauty": min_beauty})
 
         min_affection = evolution_details["min_affection"]
         min_affection_display = ""
         if min_affection:
-            min_affection_display = " " + self.translate("evolve.details.with.affection", {"affection": min_affection})
+            min_affection_display = " " + self.translate(
+                "evolve.details.with.affection", {"affection": min_affection})
 
-        time_of_day = evolution_details["time_of_day"]  # None or "day" or "night"
+        time_of_day = evolution_details[
+            "time_of_day"]  # None or "day" or "night"
         time_display = ""
         if time_of_day:
-            time_display = " " + self.translate("evolve.details.time.of.day", {"time": time_of_day})
+            time_display = " " + self.translate("evolve.details.time.of.day",
+                                                {"time": time_of_day})
 
         gender = evolution_details["gender"]  # None, 1=female, 2=male
         gender_display = ""
         if gender:
             if gender == 1:
-                gender_display = " " + self.translate("evolve.details.if.female")
+                gender_display = " " + self.translate(
+                    "evolve.details.if.female")
             else:
                 gender_display = " " + self.translate("evolve.details.if.male")
 
@@ -350,80 +365,102 @@ class PokemonSkill(CommonQuerySkill):
         party_type_display = ""  # must have this type of pokemon in their party
         if party_type_dict:
             party_type = type_(party_type_dict["name"])
-            party_type_display = " " + self.translate("evolve.details.with.pokemon.party.type",
-                                                      {"type": self._get_name_from_lang(party_type.names)})
+            party_type_display = " " + self.translate(
+                "evolve.details.with.pokemon.party.type",
+                {"type": self._get_name_from_lang(party_type.names)})
 
         location_dict = evolution_details["location"]
         location_display = ""
         if location_dict:
             game_location = location(location_dict["name"])
-            location_display = " " + self.translate("evolve.details.location",
-                                                    {"location": self._get_name_from_lang(game_location.names)})
+            location_display = " " + self.translate(
+                "evolve.details.location",
+                {"location": self._get_name_from_lang(game_location.names)})
 
         needs_rain_display = ""
         if evolution_details["needs_overworld_rain"]:
-            needs_rain_display = " " + self.translate("evolve.details.with.rain")
+            needs_rain_display = " " + self.translate(
+                "evolve.details.with.rain")
 
         turn_upside_down_display = ""
         if evolution_details["turn_upside_down"]:
-            turn_upside_down_display = " " + self.translate("evolve.details.turn.upside.down")
+            turn_upside_down_display = " " + self.translate(
+                "evolve.details.turn.upside.down")
 
         known_move = evolution_details["known_move"]
         known_move_display = ""
         if known_move:
-            known_move_display = " " + self.translate("evolve.details.knowing.move",
-                                                      {"move": self._get_name_from_lang(move(known_move["name"]).names)})
+            known_move_display = " " + self.translate(
+                "evolve.details.knowing.move", {
+                    "move":
+                        self._get_name_from_lang(move(known_move["name"]).names)
+                })
 
         known_move_type = evolution_details["known_move_type"]
         known_move_type_display = ""
         if known_move_type:
-            known_move_type_display = " " + self.translate("evolve.details.knowing.move.type",
-                                                           {"type": self._get_name_from_lang(type_(known_move_type["name"]).names)})
+            known_move_type_display = " " + self.translate(
+                "evolve.details.knowing.move.type", {
+                    "type":
+                        self._get_name_from_lang(
+                            type_(known_move_type["name"]).names)
+                })
 
         relative_stats = evolution_details["relative_physical_stats"]
         relative_stats_display = ""
         if relative_stats is not None:
             if relative_stats == -1:
-                relative_stats_display = " " + self.translate("evolve.details.stats.attack.less.than.defense")
+                relative_stats_display = " " + self.translate(
+                    "evolve.details.stats.attack.less.than.defense")
             elif relative_stats == 0:
-                relative_stats_display = " " + self.translate("evolve.details.stats.attack.equals.defense")
+                relative_stats_display = " " + self.translate(
+                    "evolve.details.stats.attack.equals.defense")
             else:
                 assert relative_stats == 1
-                relative_stats_display = " " + self.translate("evolve.details.stats.attack.greater.than.defense")
+                relative_stats_display = " " + self.translate(
+                    "evolve.details.stats.attack.greater.than.defense")
 
         party_species = evolution_details["party_species"]
         party_species_display = ""
         if party_species:
-            species_name = self._species_name(pokemon_species(party_species["name"]))
-            party_species_display = " " + self.translate("evolve.details.with.pokemon.party", {"pokemon": species_name})
+            species_name = self._species_name(
+                pokemon_species(party_species["name"]))
+            party_species_display = " " + self.translate(
+                "evolve.details.with.pokemon.party", {"pokemon": species_name})
 
         # ==== different triggers ====
         if trigger.name == "shed":
             return trigger_name
         elif trigger.name == "use-item":
             used_item = item(evolution_details["item"]["name"])
-            return trigger_name + " " + self._get_name_from_lang(used_item.names)
+            return trigger_name + " " + self._get_name_from_lang(
+                used_item.names)
         elif trigger.name == "trade":
             trade_species_dict = evolution_details["trade_species"]
             trade_species_display = ""
             if trade_species_dict:
                 trade_species = pokemon_species(trade_species_dict["name"])
-                trade_species_display = " " + self.translate("evolve.details.trade.species",
-                                                             {"species": self._get_name_from_lang(trade_species.names)})
+                trade_species_display = " " + self.translate(
+                    "evolve.details.trade.species",
+                    {"species": self._get_name_from_lang(trade_species.names)})
             return trigger_name + held_item_display + trade_species_display
 
         if trigger.name != "level-up":
-            LOG.error("This is bad! trigger.name should be level-up but it's: {}".format(trigger.name))
+            LOG.error(
+                "This is bad! trigger.name should be level-up but it's: {}".
+                format(trigger.name))
 
         # === level up trigger below ===
         level_up_display = trigger_name
         if min_level_display:
             level_up_display = min_level_display
 
-        return (level_up_display + held_item_display + known_move_display + known_move_type_display
-                + min_happiness_display + min_beauty_display + min_affection_display + time_display + location_display
-                + needs_rain_display + gender_display + relative_stats_display + party_type_display
-                + party_species_display + turn_upside_down_display)
+        return (level_up_display + held_item_display + known_move_display +
+                known_move_type_display + min_happiness_display +
+                min_beauty_display + min_affection_display + time_display +
+                location_display + needs_rain_display + gender_display +
+                relative_stats_display + party_type_display +
+                party_species_display + turn_upside_down_display)
 
     def _extract_pokemon(self, message):
         name = _extract_name(message, self.pokemon_names)
@@ -482,7 +519,8 @@ class PokemonSkill(CommonQuerySkill):
 
     @property
     def has_context(self):
-        return self.last_context_time and self.last_context_time + 15 >= time.time()
+        return self.last_context_time and self.last_context_time + 15 >= time.time(
+        )
 
     def reset_all_context(self):
         self.last_pokemon = None
@@ -496,25 +534,33 @@ class PokemonSkill(CommonQuerySkill):
                 return phrase, CQSMatchLevel.EXACT, True, ("pokemon", mon.name)
             if self.voc_match(phrase, "Pokemon") and self.last_pokemon:
                 return phrase, CQSMatchLevel.EXACT, ("pokemon", None)
-            elif any(self.voc_match(phrase, vocab) for vocab in ["Evolve", "CaptureRate"]):
+            elif any(
+                    self.voc_match(phrase, vocab)
+                    for vocab in ["Evolve", "CaptureRate"]):
                 return phrase, CQSMatchLevel.CATEGORY if self.has_context else CQSMatchLevel.GENERAL, \
-                       True, ("pokemon", None)
+                    True, ("pokemon", None)
             else:
                 if self.has_context:
-                    if any(self.voc_match(phrase, vocab) for vocab in ["Height", "Weight", "Type", "Form", "Attack",
-                                                                       "Defense", "Special", "Color", "Egg",
-                                                                       "Happiness"]):
-                        return phrase, CQSMatchLevel.GENERAL, True, ("pokemon", None)
+                    if any(
+                            self.voc_match(phrase, vocab) for vocab in
+                            [
+                                "Height", "Weight", "Type", "Form", "Attack",
+                                "Defense", "Special", "Color", "Egg", "Happiness"
+                            ]):
+                        return phrase, CQSMatchLevel.GENERAL, True, ("pokemon",
+                                                                     None)
 
             abil = self._extract_ability(phrase)
             ability_said = bool(abil) or self.voc_match(phrase, "Ability")
-            additional_ability = any(self.voc_match(phrase, vocab) for vocab in ["AbilityEffectEntry",
-                                                                                 "AbilityEffectEntryShort",
-                                                                                 "AbilityFlavorText"])
+            additional_ability = any(
+                self.voc_match(phrase, vocab) for vocab in [
+                    "AbilityEffectEntry", "AbilityEffectEntryShort",
+                    "AbilityFlavorText"
+                ])
             if ability_said or additional_ability:
                 return phrase, \
-                       CQSMatchLevel.EXACT if (ability_said and additional_ability) else CQSMatchLevel.CATEGORY, \
-                       True, ("ability", abil.name if abil else None)
+                    CQSMatchLevel.EXACT if (ability_said and additional_ability) else CQSMatchLevel.CATEGORY, \
+                    True, ("ability", abil.name if abil else None)
         except ConnectionError:
             pass
 
@@ -532,7 +578,8 @@ class PokemonSkill(CommonQuerySkill):
         data_name = data[1]  # The resource or None
 
         if data_type == "pokemon":
-            mon = self._check_pokemon(pokemon(data_name) if data_name else None)
+            mon = self._check_pokemon(
+                pokemon(data_name) if data_name else None)
             if not mon:
                 return
 
@@ -549,7 +596,8 @@ class PokemonSkill(CommonQuerySkill):
                 self.do_pokemon_abilities(mon)
             elif self.voc_match(phrase, "Introduced"):
                 self.do_pokemon_version_introduced(mon)
-            elif self.voc_match(phrase, "Effective") and self.voc_match(phrase, "Against"):
+            elif self.voc_match(phrase, "Effective") and self.voc_match(
+                    phrase, "Against"):
                 self.do_type_effectiveness(mon, phrase)
             elif self.voc_match(phrase, "Weight"):
                 self.do_pokemon_weight(mon, phrase)
@@ -560,7 +608,10 @@ class PokemonSkill(CommonQuerySkill):
             elif self.voc_match(phrase, "Form"):
                 self.do_pokemon_form(mon)
             elif self.voc_match(phrase, "ID"):
-                self.speak_dialog("pokemon.id.is", {"pokemon": self._pokemon_name(mon), "id": str(mon.species.id)})
+                self.speak_dialog("pokemon.id.is", {
+                    "pokemon": self._pokemon_name(mon),
+                    "id": str(mon.species.id)
+                })
             elif self.voc_match(phrase, "Speed"):
                 self.do_pokemon_base(mon, "speed")
             elif self.voc_match(phrase, "HP"):
@@ -614,11 +665,15 @@ class PokemonSkill(CommonQuerySkill):
     def do_pokemon_weight(self, mon, phrase):
         kg = mon.weight / 10.0
         if self._use_english_units(phrase):
-            display = str(int(round(kg * 2.20462))) + " " + self.translate("pounds")
+            display = str(int(round(
+                kg * 2.20462))) + " " + self.translate("pounds")
         else:
             display = str(kg) + " " + self.translate("kilograms")
 
-        self.speak_dialog("pokemon.weighs", {"pokemon": self._pokemon_name(mon), "weight": display})
+        self.speak_dialog("pokemon.weighs", {
+            "pokemon": self._pokemon_name(mon),
+            "weight": display
+        })
 
     def do_pokemon_height(self, mon, phrase):
         meters = mon.height / 10.0
@@ -635,9 +690,13 @@ class PokemonSkill(CommonQuerySkill):
             else:
                 display = str(inches) + " " + self.translate("inches")
         else:
-            display = str(round(meters * 10.0) / 10.0) + " " + self.translate("meters")
+            display = str(
+                round(meters * 10.0) / 10.0) + " " + self.translate("meters")
 
-        self.speak_dialog("pokemon.height", {"pokemon": self._pokemon_name(mon), "height": display})
+        self.speak_dialog("pokemon.height", {
+            "pokemon": self._pokemon_name(mon),
+            "height": display
+        })
 
     def do_pokemon_type(self, mon):
         names = []
@@ -647,41 +706,57 @@ class PokemonSkill(CommonQuerySkill):
 
         pokemon_name = self._pokemon_name(mon)
         if len(names) == 1:
-            self.speak_dialog("pokemon.type.one", {"pokemon": pokemon_name, "type1": names[0]})
+            self.speak_dialog("pokemon.type.one", {
+                "pokemon": pokemon_name,
+                "type1": names[0]
+            })
         else:
-            self.speak_dialog("pokemon.type.two", {"pokemon": pokemon_name, "type1": names[0],
-                                                   "type2": names[1]})
+            self.speak_dialog("pokemon.type.two", {
+                "pokemon": pokemon_name,
+                "type1": names[0],
+                "type2": names[1]
+            })
             if len(names) > 2:
-                LOG.info("This pokemon has more than two types??? names: " + str(names) + " pokemon: " + pokemon_name)
+                LOG.info("This pokemon has more than two types??? names: " +
+                         str(names) + " pokemon: " + pokemon_name)
 
     # region evolution
     def do_pokemon_evolve_final(self, mon):
         pokemon_name = self._pokemon_name(mon)
 
-        species_chain = find_species_chain(mon.species.evolution_chain.chain, mon.species.name)[1]
+        species_chain = find_species_chain(mon.species.evolution_chain.chain,
+                                           mon.species.name)[1]
         final_evolution_chain_list = find_final_species_chains(species_chain)
         if len(final_evolution_chain_list) == 1:
             evolution_chain = final_evolution_chain_list[0]
-            if attr(evolution_chain, "species.name") == mon.species.name:  # pokemon is in final evolution
+            if attr(evolution_chain, "species.name"
+                    ) == mon.species.name:  # pokemon is in final evolution
                 if not mon.species.evolution_chain.chain.evolves_to:  # if evolves_to list is empty
-                    self.speak_dialog("pokemon.has.no.evolutions", {"pokemon": pokemon_name})
+                    self.speak_dialog("pokemon.has.no.evolutions",
+                                      {"pokemon": pokemon_name})
                     return
                 else:
-                    self.speak_dialog("pokemon.is.in.final.evolution", {"pokemon": pokemon_name})
+                    self.speak_dialog("pokemon.is.in.final.evolution",
+                                      {"pokemon": pokemon_name})
                     return
         elif len(final_evolution_chain_list) == 0:
-            raise ValueError("find_final_species_chains() returned a list with a length of 0")
+            raise ValueError(
+                "find_final_species_chains() returned a list with a length of 0"
+            )
 
         names_list = []
         for evolution_chain in final_evolution_chain_list:
-            name = self._species_name(pokemon_species(attr(evolution_chain, "species.name")))
+            name = self._species_name(
+                pokemon_species(attr(evolution_chain, "species.name")))
             names_list.append(name)
         display = self._list_to_str(names_list)
         if not display:
             LOG.error("display is empty. names_list: " + str(names_list) +
                       ", ...chain_list: " + str(final_evolution_chain_list))
-        self.speak_dialog("pokemon.final.evolution", {"pokemon": pokemon_name,
-                                                      "final": display})
+        self.speak_dialog("pokemon.final.evolution", {
+            "pokemon": pokemon_name,
+            "final": display
+        })
 
     def do_pokemon_evolve_first(self, mon):
         pokemon_name = self._pokemon_name(mon)
@@ -690,17 +765,23 @@ class PokemonSkill(CommonQuerySkill):
         species = evolution_chain.species
         if species.name == mon.species.name:  # mon is in first evolution
             if not evolution_chain.evolves_to:  # pokemon has no evolutions
-                self.speak_dialog("pokemon.has.no.evolutions", {"pokemon": pokemon_name})
+                self.speak_dialog("pokemon.has.no.evolutions",
+                                  {"pokemon": pokemon_name})
                 return
             else:
-                self.speak_dialog("pokemon.is.in.first.evolution", {"pokemon": pokemon_name})
+                self.speak_dialog("pokemon.is.in.first.evolution",
+                                  {"pokemon": pokemon_name})
                 return
         species_name = self._species_name(species)
 
-        self.speak_dialog("pokemon.first.evolution.is", {"pokemon": pokemon_name, "first": species_name})
+        self.speak_dialog("pokemon.first.evolution.is", {
+            "pokemon": pokemon_name,
+            "first": species_name
+        })
 
     def do_pokemon_evolve_previous(self, mon):
-        previous_chain = find_species_chain(mon.species.evolution_chain.chain, mon.species.name)[0]
+        previous_chain = find_species_chain(mon.species.evolution_chain.chain,
+                                            mon.species.name)[0]
         how = ""
         if previous_chain:
             for evolution in attr(previous_chain, "evolves_to"):
@@ -708,23 +789,31 @@ class PokemonSkill(CommonQuerySkill):
                     details_list = attr(evolution, "evolution_details")
                     how_str_list = []
                     for details in details_list:
-                        how_str_list.append(self._evolution_details_str(details))
+                        how_str_list.append(
+                            self._evolution_details_str(details))
                     how = self._list_to_str(how_str_list)
                     break
         previous_species = mon.species.evolves_from_species
         pokemon_name = self._pokemon_name(mon)
         if not previous_species:
-            self.speak_dialog("pokemon.has.no.previous.evolution", {"pokemon": pokemon_name})
+            self.speak_dialog("pokemon.has.no.previous.evolution",
+                              {"pokemon": pokemon_name})
             return
         species_name = self._species_name(previous_species)
-        self.speak_dialog("pokemon.evolves.from", {"pokemon": pokemon_name, "from": species_name, "how": how})
+        self.speak_dialog("pokemon.evolves.from", {
+            "pokemon": pokemon_name,
+            "from": species_name,
+            "how": how
+        })
 
     def do_pokemon_evolve_into(self, mon):
         pokemon_name = self._pokemon_name(mon)
 
-        species_chain = find_species_chain(mon.species.evolution_chain.chain, mon.species.name)[1]
+        species_chain = find_species_chain(mon.species.evolution_chain.chain,
+                                           mon.species.name)[1]
         if not species_chain:
-            self.speak_dialog("pokemon.does.not.evolve", {"pokemon": pokemon_name})
+            self.speak_dialog("pokemon.does.not.evolve",
+                              {"pokemon": pokemon_name})
             return
 
         into = attr(species_chain, "evolves_to")
@@ -738,19 +827,24 @@ class PokemonSkill(CommonQuerySkill):
                 evolution_details_list = attr(evolution, "evolution_details")
                 evolution_details_str_list = []
                 for evolution_details in evolution_details_list:
-                    evolution_details_str_list.append(self._evolution_details_str(evolution_details))
-                details_display = self._list_to_str(evolution_details_str_list, and_str=self.translate("or"))
+                    evolution_details_str_list.append(
+                        self._evolution_details_str(evolution_details))
+                details_display = self._list_to_str(
+                    evolution_details_str_list, and_str=self.translate("or"))
 
             names_into.append(name + details_display)
 
         if not names_into:
-            self.speak_dialog("pokemon.does.not.evolve", {"pokemon": pokemon_name})
+            self.speak_dialog("pokemon.does.not.evolve",
+                              {"pokemon": pokemon_name})
             return
 
         display = self._list_to_str(names_into, and_str=self.translate("or"))
 
-        self.speak_dialog("pokemon.evolves.into", {"pokemon": pokemon_name,
-                                                   "evolve": display})
+        self.speak_dialog("pokemon.evolves.into", {
+            "pokemon": pokemon_name,
+            "evolve": display
+        })
 
     # endregion
 
@@ -758,10 +852,14 @@ class PokemonSkill(CommonQuerySkill):
         pokemon_name = self._pokemon_name(mon)
         form_name = self._form_name(mon)
         if not form_name:
-            self.speak_dialog("pokemon.has.no.forms", {"pokemon": pokemon_name})
+            self.speak_dialog("pokemon.has.no.forms",
+                              {"pokemon": pokemon_name})
             return
 
-        self.speak_dialog("pokemon.is.in.form", {"pokemon": pokemon_name, "form": form_name})
+        self.speak_dialog("pokemon.is.in.form", {
+            "pokemon": pokemon_name,
+            "form": form_name
+        })
 
     def do_pokemon_version_introduced(self, mon):
         forms = mon.forms
@@ -772,56 +870,84 @@ class PokemonSkill(CommonQuerySkill):
         version_names = [self._get_name_from_lang(v.names) for v in versions]
         generation_id = version_group.generation.id
         self.last_generation = generation_id
-        self.speak_dialog("pokemon.version.introduced", {
-            "pokemon": self._pokemon_name(mon),
-            "versions": self._list_to_str(version_names),
-            "generation": generation_id
-        })
+        self.speak_dialog(
+            "pokemon.version.introduced", {
+                "pokemon": self._pokemon_name(mon),
+                "versions": self._list_to_str(version_names),
+                "generation": generation_id
+            })
 
     def do_ability_generation_introduced(self, abil):
         generation_id = abil.generation.id
         self.last_generation = generation_id
         name = self._get_name_from_lang(abil.names)
-        self.speak_dialog("ability.generation.introduced", {"ability": name, "generation": generation_id})
+        self.speak_dialog("ability.generation.introduced", {
+            "ability": name,
+            "generation": generation_id
+        })
 
     # region simple stats
     def do_pokemon_base(self, mon, stat):
         value = base_stat(mon, stat)
-        self.speak_dialog("base.stat.is", {"pokemon": self._pokemon_name(mon),
-                                           "stat": stat, "value": value})
+        self.speak_dialog("base.stat.is", {
+            "pokemon": self._pokemon_name(mon),
+            "stat": stat,
+            "value": value
+        })
 
     def do_pokemon_color(self, mon):
         color_name = self._get_name_from_lang(mon.species.color.names)
         pokemon_name = self._pokemon_name(mon)
 
-        self.speak_dialog("pokemon.color.is", {"pokemon": pokemon_name, "color": color_name})
+        self.speak_dialog("pokemon.color.is", {
+            "pokemon": pokemon_name,
+            "color": color_name
+        })
 
     def do_pokemon_shape(self, mon):
         shape_name = self._get_name_from_lang(mon.species.shape.names)
         pokemon_name = self._pokemon_name(mon)
 
-        self.speak_dialog("pokemon.shape.is", {"pokemon": pokemon_name, "shape": shape_name})
+        self.speak_dialog("pokemon.shape.is", {
+            "pokemon": pokemon_name,
+            "shape": shape_name
+        })
 
     def do_pokemon_habitat(self, mon):
         habitat_name = self._get_name_from_lang(mon.species.habitat.names)
         pokemon_name = self._pokemon_name(mon)
 
-        self.speak_dialog("pokemon.lives.in", {"pokemon": pokemon_name, "habitat": habitat_name})
+        self.speak_dialog("pokemon.lives.in", {
+            "pokemon": pokemon_name,
+            "habitat": habitat_name
+        })
 
     def do_pokemon_base_happiness(self, mon):
         pokemon_name = self._pokemon_name(mon)
         happiness = mon.species.base_happiness
-        self.speak_dialog("base.stat.is", {"pokemon": pokemon_name, "stat": "happiness", "value": str(happiness)})
+        self.speak_dialog("base.stat.is", {
+            "pokemon": pokemon_name,
+            "stat": "happiness",
+            "value": str(happiness)
+        })
 
     def do_pokemon_base_experience(self, mon):
         pokemon_name = self._pokemon_name(mon)
         experience = mon.base_experience
-        self.speak_dialog("base.stat.is", {"pokemon": pokemon_name, "stat": "experience", "value": str(experience)})
+        self.speak_dialog(
+            "base.stat.is", {
+                "pokemon": pokemon_name,
+                "stat": "experience",
+                "value": str(experience)
+            })
 
     def do_pokemon_capture_rate(self, mon):
         pokemon_name = self._pokemon_name(mon)
         capture_rate = mon.species.capture_rate
-        self.speak_dialog("pokemon.capture.rate", {"pokemon": pokemon_name, "rate": capture_rate})
+        self.speak_dialog("pokemon.capture.rate", {
+            "pokemon": pokemon_name,
+            "rate": capture_rate
+        })
 
     def do_pokemon_egg_groups(self, mon):
         groups = mon.species.egg_groups
@@ -832,7 +958,10 @@ class PokemonSkill(CommonQuerySkill):
 
         display = self._list_to_str(names_list)
         pokemon_name = self._pokemon_name(mon)
-        self.speak_dialog("pokemon.egg.groups.are", {"pokemon": pokemon_name, "groups": display})
+        self.speak_dialog("pokemon.egg.groups.are", {
+            "pokemon": pokemon_name,
+            "groups": display
+        })
 
     # endregion
 
@@ -884,38 +1013,48 @@ class PokemonSkill(CommonQuerySkill):
         if not normal_abilities and not hidden_abilities:
             self.speak_dialog("pokemon.abilities.none")
         elif not normal_abilities:  # only hidden
-            self.speak_dialog("pokemon.abilities.hidden", {"pokemon": pokemon_name,
-                                                           "hidden_abilities": self._list_to_str(hidden_abilities)})
+            self.speak_dialog(
+                "pokemon.abilities.hidden", {
+                    "pokemon": pokemon_name,
+                    "hidden_abilities": self._list_to_str(hidden_abilities)
+                })
         elif not hidden_abilities:
-            self.speak_dialog("pokemon.abilities.non-hidden", {"pokemon": pokemon_name,
-                                                               "abilities": self._list_to_str(normal_abilities)})
+            self.speak_dialog(
+                "pokemon.abilities.non-hidden", {
+                    "pokemon": pokemon_name,
+                    "abilities": self._list_to_str(normal_abilities)
+                })
         else:  # has both
-            self.speak_dialog("pokemon.abilities.hidden.non-hidden", {
-                "pokemon": pokemon_name,
-                "abilities": self._list_to_str(normal_abilities),
-                "hidden_abilities": self._list_to_str(hidden_abilities)
-            })
+            self.speak_dialog(
+                "pokemon.abilities.hidden.non-hidden", {
+                    "pokemon": pokemon_name,
+                    "abilities": self._list_to_str(normal_abilities),
+                    "hidden_abilities": self._list_to_str(hidden_abilities)
+                })
 
     def do_ability_flavor_text(self, abil, phrase):
         version_name = _extract_name(phrase, self.version_names)
         text = self._get_flavor_text(abil.flavor_text_entries, version_name)
         if text:
-            self.speak_dialog("ability.flavor.text", {"ability": self._get_name_from_lang(abil.names),
-                                                      "info": text})
+            self.speak_dialog("ability.flavor.text", {
+                "ability": self._get_name_from_lang(abil.names),
+                "info": text
+            })
         else:
             ability_version = version(version_name)
-            self.speak_dialog("ability.not.in.version",
-                              {"ability": self._get_name_from_lang(abil.names),
-                               "version": self._get_name_from_lang(ability_version.names)})
+            self.speak_dialog(
+                "ability.not.in.version", {
+                    "ability": self._get_name_from_lang(abil.names),
+                    "version": self._get_name_from_lang(ability_version.names)
+                })
 
     def do_ability_effect_entry(self, abil, short=True):
         text = self._get_effect_entry(abil.effect_entries, short=short)
         if not text:
-            raise Exception("The ability didn't have effect_entries? ability.effect_entries: "
-                            + str(abil.effect_entries))
-        self.speak_dialog("ability.effect.entry", {"ability": self._get_name_from_lang(abil.names),
-                                                   "info": text})
-
-
-def create_skill():
-    return PokemonSkill()
+            raise Exception(
+                "The ability didn't have effect_entries? ability.effect_entries: "
+                + str(abil.effect_entries))
+        self.speak_dialog("ability.effect.entry", {
+            "ability": self._get_name_from_lang(abil.names),
+            "info": text
+        })
